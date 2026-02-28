@@ -1,0 +1,60 @@
+﻿@page "/productos"
+@inject IHttpClientFactory ClientFactory
+@using System.Net.Http.Json
+
+<h3>Listado de Productos</h3>
+
+@if (productos == null)
+{
+    <p><em>Cargando...</em></p>
+}
+else
+{
+    <!-- 🔥 BOTÓN NUEVO PRODUCTO -->
+    <a class="btn btn-success mb-3" href="/productos/crear">
+        ➕ Nuevo Producto
+    </a>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Código</th>
+                <th>Nombre</th>
+                <th>Precio</th>
+                <th>Stock</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in productos)
+            {
+                <tr>
+                    <td>@p.Id</td>
+                    <td>@p.Codigo</td>
+                    <td>@p.Nombre</td>
+                    <td>@p.Precio</td>
+                    <td>@p.Stock</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Producto>? productos;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var client = ClientFactory.CreateClient("Api");
+        productos = await client.GetFromJsonAsync<List<Producto>>("api/productos");
+    }
+
+    public class Producto
+    {
+        public int Id { get; set; }
+        public string Codigo { get; set; } = string.Empty;
+        public string Nombre { get; set; } = string.Empty;
+        public decimal Precio { get; set; }
+        public int Stock { get; set; }
+    }
+}
