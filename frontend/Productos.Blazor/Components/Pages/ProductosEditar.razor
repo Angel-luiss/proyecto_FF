@@ -1,0 +1,118 @@
+﻿@page "/productos/editar/{id:int}"
+@rendermode InteractiveServer
+
+@inject IHttpClientFactory ClientFactory
+@inject NavigationManager Nav
+@using System.Net.Http.Json
+@using System.ComponentModel.DataAnnotations
+
+<h3>Editar Producto</h3>
+
+@if (!string.IsNullOrEmpty(mensajeError))
+{
+    <div class="alert alert-danger">
+        ❌ @mensajeError
+    </div>
+}
+
+@if (mensajeExito)
+{
+    <div class="alert alert-success">
+        ✅ Producto actualizado correctamente
+    </div>
+}
+
+@if (producto == null)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <EditForm Model="producto" OnValidSubmit="Actualizar" FormName="editarProducto">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label class="form-label">Código</label>
+            <InputText class="form-control" @bind-Value="producto.Codigo" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Nombre</label>
+            <InputText class="form-control" @bind-Value="producto.Nombre" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Precio</label>
+            <InputNumber class="form-control" @bind-Value="producto.Precio" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Stock</label>
+            <InputNumber class="form-control" @bind-Value="producto.Stock" />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Actualizar</button>
+        <button type="button" class="btn btn-secondary ms-2" @onclick="Cancelar">Cancelar</button>
+    </EditForm>
+}
+
+@code {
+
+    [Parameter] public int Id { get; set; }
+
+    private Producto? producto;
+    private string? mensajeError;
+    private bool mensajeExito = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var client = ClientFactory.CreateClient("Api");
+        producto = await client.GetFromJsonAsync<Producto>($"api/productos/{Id}");
+    }
+
+    private async Task Actualizar()
+    {
+        mensajeError = null;
+        mensajeExito = false;
+
+        var client = ClientFactory.CreateClient("Api");
+        var response = await client.PutAsJsonAsync($"api/productos/{Id}", producto);
+
+        if (response.IsSuccessStatusCode)
+        {
+            mensajeExito = true;
+            StateHasChanged();
+
+            await Task.Delay(1200);
+            Nav.NavigateTo("/productos", true);
+        }
+        else
+        {
+            mensajeError = await response.Content.ReadAsStringAsync();
+            StateHasChanged();
+        }
+    }
+
+    private void Cancelar()
+    {
+        Nav.NavigateTo("/productos");
+    }
+
+    public class Producto
+    {
+        public int Id { get; set; }
+
+        [Required(ErrorMessage = "El código es obligatorio")]
+        public string Codigo { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "El nombre es obligatorio")]
+        public string Nombre { get; set; } = string.Empty;
+
+        [Range(0.01, double.MaxValue, ErrorMessage = "El precio debe ser mayor que 0")]
+        public decimal Precio { get; set; }
+
+        [Range(0, int.MaxValue, ErrorMessage = "El stock no puede ser negativo")]
+        public int Stock { get; set; }
+    }
+}
