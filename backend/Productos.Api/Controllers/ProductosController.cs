@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Productos.Api.Data;
 using Productos.Api.Models;
+using Productos.Api.Services;
 
 namespace Productos.Api.Controllers
 {
@@ -9,102 +8,71 @@ namespace Productos.Api.Controllers
     [ApiController]
     public class ProductosController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IProductoService _service;
 
-        public ProductosController(AppDbContext context)
+        public ProductosController(IProductoService service)
         {
-            _context = context;
+            _service = service;
         }
 
-        // GET: api/productos
-        // Soporta filtros opcionales: codigo, nombre, activo
+        // ✅ GET lista
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Producto>>> GetProductos(
-            string? codigo,
-            string? nombre,
-            bool? activo)
+            [FromQuery] string? codigo,
+            [FromQuery] string? nombre,
+            [FromQuery] bool? activo)
         {
-            var query = _context.Productos.AsQueryable();
-
-            if (!string.IsNullOrEmpty(codigo))
-                query = query.Where(p => p.Codigo.Contains(codigo));
-
-            if (!string.IsNullOrEmpty(nombre))
-                query = query.Where(p => p.Nombre.Contains(nombre));
-
-            if (activo.HasValue)
-                query = query.Where(p => p.Activo == activo.Value);
-
-            return await query.ToListAsync();
+            var productos = await _service.GetAll(codigo, nombre, activo);
+            return Ok(productos);
         }
 
-        // GET: api/productos/{id}
+        // ✅ GET por id
         [HttpGet("{id}")]
         public async Task<ActionResult<Producto>> GetProducto(int id)
         {
-            var producto = await _context.Productos
-                .Where(p => p.Id == id && p.Activo)
-                .FirstOrDefaultAsync();
+            var producto = await _service.GetById(id);
 
             if (producto == null)
-                return NotFound();
+                return NotFound("Producto no encontrado.");
 
-            return producto;
+            return Ok(producto);
         }
 
-        // POST: api/productos
+        // ✅ POST crear
         [HttpPost]
         public async Task<ActionResult<Producto>> PostProducto(Producto producto)
         {
-            producto.CreatedAt = DateTime.Now;
-            producto.Activo = true;
+            var result = await _service.Create(producto);
 
-            _context.Productos.Add(producto);
-            await _context.SaveChangesAsync();
+            if (!result.Success)
+                return BadRequest(result.Error);
 
-            return CreatedAtAction(nameof(GetProducto), new { id = producto.Id }, producto);
+            return CreatedAtAction(
+                nameof(GetProducto),
+                new { id = result.Producto!.Id },
+                result.Producto);
         }
 
-        // PUT: api/productos/{id}
+        // ✅ PUT editar
         [HttpPut("{id}")]
         public async Task<IActionResult> PutProducto(int id, Producto producto)
         {
-            if (id != producto.Id)
-                return BadRequest("El id del body no coincide con el de la URL.");
+            var result = await _service.Update(id, producto);
 
-            var existing = await _context.Productos.FindAsync(id);
-
-            if (existing == null || !existing.Activo)
-                return NotFound();
-
-            existing.Codigo = producto.Codigo;
-            existing.Nombre = producto.Nombre;
-            existing.Precio = producto.Precio;
-            existing.Stock = producto.Stock;
-            existing.UpdatedAt = DateTime.Now;
-
-            await _context.SaveChangesAsync();
+            if (!result.Success)
+                return BadRequest(result.Error);
 
             return NoContent();
         }
 
-        // DELETE: api/productos/{id}
-        // Soft delete
+        // ✅ DELETE soft delete
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProducto(int id)
         {
-            var producto = await _context.Productos.FindAsync(id);
+            var result = await _service.SoftDelete(id);
 
-            if (producto == null)
-                return NotFound();
-
-            if (!producto.Activo)
-                return BadRequest("El producto ya está inactivo.");
-
-            producto.Activo = false;
-            producto.UpdatedAt = DateTime.Now;
-
-            await _context.SaveChangesAsync();
+            if (!result.Success)
+                return BadRequest(result.Error);
 
             return NoContent();
         }

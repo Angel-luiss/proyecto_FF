@@ -5,24 +5,29 @@ namespace Productos.Api.Models
 {
     public class Producto
     {
-        [Key]
         public int Id { get; set; }
 
-        [Required, StringLength(20)]
+        [Required]
+        [MaxLength(20)]
         public string Codigo { get; set; } = string.Empty;
 
-        [Required, StringLength(100)]
+        [Required]
+        [MaxLength(100)]
         public string Nombre { get; set; } = string.Empty;
 
-        [Required, Column(TypeName = "decimal(18,2)")]
+        [Required]
+        [Range(0.01, double.MaxValue, ErrorMessage = "El precio debe ser mayor a 0.")]
+        [Column(TypeName = "decimal(18,2)")]
         public decimal Precio { get; set; }
 
         [Required]
+        [Range(0, int.MaxValue, ErrorMessage = "El stock no puede ser negativo.")]
         public int Stock { get; set; }
 
         public bool Activo { get; set; } = true;
 
         public DateTime CreatedAt { get; set; }
+
         public DateTime? UpdatedAt { get; set; }
     }
 }
