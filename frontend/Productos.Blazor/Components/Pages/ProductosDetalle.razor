@@ -1,0 +1,51 @@
+﻿@page "/productos/detalle/{Id:int}"
+@rendermode InteractiveServer
+
+@inject IHttpClientFactory ClientFactory
+@inject NavigationManager Nav
+@using System.Net.Http.Json
+@using Microsoft.AspNetCore.Components
+
+<h3>Detalle del Producto</h3>
+
+@if (producto == null)
+{
+    <p><em>Cargando...</em></p>
+}
+else
+{
+    <div class="card p-3 shadow-sm">
+        <p><strong>ID:</strong> @producto.Id</p>
+        <p><strong>Código:</strong> @producto.Codigo</p>
+        <p><strong>Nombre:</strong> @producto.Nombre</p>
+        <p><strong>Precio:</strong> @producto.Precio</p>
+        <p><strong>Stock:</strong> @producto.Stock</p>
+
+        <button class="btn btn-secondary mt-2"
+                @onclick='() => Nav.NavigateTo("/productos")'>
+            Volver
+        </button>
+    </div>
+}
+
+@code {
+
+    [Parameter] public int Id { get; set; }
+
+    private Producto? producto;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var client = ClientFactory.CreateClient("Api");
+        producto = await client.GetFromJsonAsync<Producto>($"api/Productos/{Id}");
+    }
+
+    public class Producto
+    {
+        public int Id { get; set; }
+        public string Codigo { get; set; } = string.Empty;
+        public string Nombre { get; set; } = string.Empty;
+        public decimal Precio { get; set; }
+        public int Stock { get; set; }
+    }
+}

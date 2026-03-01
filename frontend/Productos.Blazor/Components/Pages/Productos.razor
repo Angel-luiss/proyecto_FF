@@ -1,0 +1,121 @@
+﻿@page "/productos"
+@rendermode InteractiveServer
+
+@inject IHttpClientFactory ClientFactory
+@using System.Net.Http.Json
+
+<h3>Listado de Productos</h3>
+
+@if (!string.IsNullOrEmpty(mensaje))
+{
+    <div class="alert @(tipoMensaje == "success" ? "alert-success" : "alert-danger")">
+        @mensaje
+    </div>
+}
+
+@if (productos == null)
+{
+    <p><em>Cargando...</em></p>
+}
+else
+{
+    <a class="btn btn-success mb-3" href="/productos/crear">
+        ➕ Nuevo Producto
+    </a>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Código</th>
+                <th>Nombre</th>
+                <th>Precio</th>
+                <th>Stock</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in productos)
+            {
+                <tr>
+                    <td>@p.Id</td>
+                    <td>@p.Codigo</td>
+                    <td>@p.Nombre</td>
+                    <td>@p.Precio</td>
+                    <td>@p.Stock</td>
+                    <td>
+                        <!-- 👁 BOTÓN VER -->
+                        <a class="btn btn-sm btn-info me-1"
+                           href="/productos/detalle/@p.Id">
+                            👁 Ver
+                        </a>
+
+                        <a class="btn btn-sm btn-warning" href="/productos/editar/@p.Id">
+                            ✏ Editar
+                        </a>
+
+                        <button type="button"
+                                class="btn btn-sm btn-danger ms-1"
+                                @onclick="() => Eliminar(p.Id)">
+                            🗑 Eliminar
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Producto>? productos;
+
+    private string? mensaje;
+    private string tipoMensaje = "success";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarProductos();
+    }
+
+    private async Task CargarProductos()
+    {
+        var client = ClientFactory.CreateClient("Api");
+        productos = await client.GetFromJsonAsync<List<Producto>>("api/Productos?activo=true");
+    }
+
+    private async Task Eliminar(int id)
+    {
+        mensaje = null;
+
+        var client = ClientFactory.CreateClient("Api");
+        var response = await client.DeleteAsync($"api/Productos/{id}");
+
+        if (response.IsSuccessStatusCode)
+        {
+            tipoMensaje = "success";
+            mensaje = "Producto eliminado correctamente.";
+
+            await CargarProductos();
+        }
+        else
+        {
+            tipoMensaje = "danger";
+            mensaje = "Error al eliminar el producto.";
+        }
+
+        StateHasChanged();
+
+        await Task.Delay(2000);
+        mensaje = null;
+        StateHasChanged();
+    }
+
+    public class Producto
+    {
+        public int Id { get; set; }
+        public string Codigo { get; set; } = string.Empty;
+        public string Nombre { get; set; } = string.Empty;
+        public decimal Precio { get; set; }
+        public int Stock { get; set; }
+    }
+}
